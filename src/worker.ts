@@ -24,13 +24,8 @@ export default {
     }
 
     const body: FetchData = (await request.json()) as FetchData;
-    if (!body.href || !body.description) {
-      return new Response('Bad request. Please include both an href and a description in the POST body.', { status: 400 });
-    }
-
-    const response = await fetch(body.href);
-    if (!response.ok) {
-      return new Response(`Failed to fetch ${body.href}`, { status: 404 });
+    if (!body.href || !body.description || !body.selector) {
+      return new Response('Bad request. Please include an href, selector, and description in the POST body.', { status: 400 });
     }
 
     // Initialize a new scraper and pass the fetched response to it
