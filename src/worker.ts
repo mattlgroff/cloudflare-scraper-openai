@@ -8,21 +8,25 @@ export interface Env {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    // We only want to accept a POST request.
     if (request.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 });
     }
 
+    // Verify the request has the CORRECT_API_KEY, so if someone tries to call your endpoint and they don't know your secret they will get a 401 Unauthorized response
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || authHeader !== `Bearer ${env.CORRECT_API_KEY}`) {
       return new Response('Unauthorized', { status: 401 });
     }
 
+    // TS interface for the POST body. We want an href, description and selector
     interface FetchData {
       href: string;
       description: string;
       selector: string;
     }
 
+    // Fetch the HTML content from the provided href that we wish to scrape
     const body: FetchData = (await request.json()) as FetchData;
     if (!body.href || !body.description || !body.selector) {
       return new Response('Bad request. Please include an href, selector, and description in the POST body.', { status: 400 });
@@ -39,14 +43,17 @@ export default {
     const jsonData = JSON.stringify(textContent);
 
     try {
+      // Send the JSON data to OpenAI's API
       const result = await sendToOpenAI(env, jsonData, body.href, body.description);
 
+      // Return the result from OpenAI's API
       return new Response(JSON.stringify(result), { status: 200 });
     } catch (err: any) {
       console.error(err);
 
+      // Do some error handling. If the error message includes "maximum context length is" then the JSON data provided was too large for OpenAI to process.
       if (err?.message?.includes('maximum context length is')) {
-        return new Response('The HTML provided is too large for OpenAI to process.', { status: 413 });
+        return new Response('The JSON provided is too large for OpenAI to process.', { status: 413 });
       } else {
         return new Response(err?.message ? err.message : "OpenAI's API had a problem.", { status: 500 });
       }
