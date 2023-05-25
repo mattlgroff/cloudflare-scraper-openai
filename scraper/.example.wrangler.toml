@@ -1,0 +1,7 @@
+name = "scraper"
+main = "src/worker.ts"
+compatibility_date = "2023-05-25"
+
+[vars]
+OPEN_AI_API_KEY = "your-open-ai-api-key"
+CORRECT_API_KEY = "your-correct-api-key"
