@@ -1,0 +1,9 @@
+name = "graphql-scraping-hub"
+main = "src/worker.ts"
+compatibility_date = "2023-05-26"
+
+[vars]
+DATABASE_URL=
+SCRAPER_API_URL=
+SCRAPER_API_TOKEN=
+REDIS_URL=
