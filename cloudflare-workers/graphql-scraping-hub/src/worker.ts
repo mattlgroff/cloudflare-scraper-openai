@@ -26,15 +26,31 @@ const typeDefs = gql`
     latest_content: JSON
   }
 
+  type ScrapingJobHistory {
+    id: ID!
+    scraping_job_id: ID!
+    started_at: String
+    ended_at: String
+    successful: Boolean
+    content: JSON
+  }
+
+  type ScrapingJobCronSchedule {
+    id: ID!
+    cron_schedule: String!
+  }
+
   type Query {
     users: [User]
     scrapingJob(id: ID!): ScrapingJob
+    allScrapingJobsCronSchedules: [ScrapingJobCronSchedule!]!
   }
 
   type Mutation {
     createScrapingJob(input: ScrapingJobInput): ScrapingJob
     updateScrapingJob(id: ID!, input: ScrapingJobInput): ScrapingJob
     deleteScrapingJob(id: ID!): Boolean
+    createScrapingJobHistory(input: ScrapingJobHistoryInput): ScrapingJobHistory
   }
 
   input ScrapingJobInput {
@@ -43,6 +59,14 @@ const typeDefs = gql`
     selector: String!
     description: String
     cron_schedule: String!
+  }
+
+  input ScrapingJobHistoryInput {
+    scraping_job_id: ID!
+    started_at: String!
+    ended_at: String!
+    successful: Boolean!
+    content: JSON!
   }
 `;
 
@@ -76,7 +100,7 @@ export default {
         // be manipulated in other ways, as long as it's returned.
         return formattedError;
       },
-      introspection: true,
+      introspection: false,
       plugins: [ApolloServerPluginLandingPageLocalDefault({ footer: false })],
     });
 

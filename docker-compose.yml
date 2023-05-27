@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  scheduler-service:
+    build:
+      context: ./scheduler-service
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./scheduler-service/.env

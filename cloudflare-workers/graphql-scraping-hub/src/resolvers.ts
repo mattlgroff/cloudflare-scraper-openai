@@ -14,7 +14,16 @@ interface ScrapingJob {
   selector: string;
   description: string;
   cron_schedule: string;
-  latest_content: any; // we may want to define a specific type for this
+  latest_content: any; // JSON, stringified
+}
+
+interface ScrapingJobHistory {
+  id: string;
+  scraping_job_id: string;
+  started_at: string;
+  ended_at: string;
+  successful: boolean;
+  content: any; // JSON, stringified
 }
 
 interface Context {
@@ -40,11 +49,7 @@ const getResolvers = (env: any): any => {
     Query: {
       users: async () => {
         try {
-          const cache = await redis.get('users');
-          if (cache) return cache;
-
           const { rows } = await pool.query('SELECT * FROM users');
-          await redis.set('users', JSON.stringify(rows));
           return rows;
         } catch (err) {
           console.error(err);
@@ -52,26 +57,22 @@ const getResolvers = (env: any): any => {
       },
       scrapingJob: async (_: any, { id }: { id: string }) => {
         try {
-          const cache = await redis.get(`scrapingJob:${id}`);
-          if (cache) return cache;
-
           const { rows } = await pool.query('SELECT * FROM scraping_jobs WHERE id = $1', [id]);
-          await redis.set(`scrapingJob:${id}`, JSON.stringify(rows[0]));
+          console.log('rows', rows);
           return rows[0];
         } catch (err) {
           console.error(err);
         }
       },
+      allScrapingJobsCronSchedules: async () => {
+        const { rows } = await pool.query('SELECT id, cron_schedule FROM scraping_jobs');
+        return rows;
+      },
     },
     User: {
       scrapingJobs: async (user: User) => {
         try {
-          const cache = await redis.get(`scrapingJobs:${user.id}`);
-          console.log('cache for user scrapingJobs', cache);
-          if (cache) return cache;
-
           const { rows } = await pool.query('SELECT * FROM scraping_jobs WHERE user_id = $1', [user.id]);
-          await redis.set(`scrapingJobs:${user.id}`, JSON.stringify(rows));
           return rows;
         } catch (err) {
           console.error(err);
@@ -80,35 +81,16 @@ const getResolvers = (env: any): any => {
     },
     ScrapingJob: {
       latest_content: async (job: ScrapingJob) => {
-        let latest_content;
-        const redis_content = await redis.get(job.id);
-        if (redis_content) {
-          try {
-            latest_content = redis_content;
-
-            if (latest_content) {
-              return latest_content;
-            }
-          } catch (error) {
-            console.log('Failed to parse redis_content for job: ', job.id);
-          }
-        }
-        if (!latest_content) {
+        try {
           const { rows: histories } = await pool.query(
             'SELECT * FROM scraping_job_histories WHERE scraping_job_id = $1 ORDER BY created_at DESC LIMIT 1',
             [job.id]
           );
-          try {
-            latest_content = JSON.parse(histories[0]?.content || '');
-            if (latest_content) {
-              return latest_content;
-            }
-          } catch (error) {
-            console.log('Failed to parse content from Postgres for job: ', job.id);
-          }
-        }
 
-        return null;
+          return JSON.parse(histories[0]?.content || null);
+        } catch (error) {
+          console.log('Failed to parse content from Postgres for job: ', job.id);
+        }
       },
     },
     Mutation: {
@@ -167,6 +149,17 @@ const getResolvers = (env: any): any => {
         await redis.del(`scrapingJob:${id}`);
 
         return true;
+      },
+      createScrapingJobHistory: async (_: any, { input }: { input: ScrapingJobHistory }) => {
+        const { scraping_job_id, started_at, ended_at, successful, content } = input;
+        const timestamp = new Date().toISOString(); // current timestamp in ISO format
+        const result = await pool.query(
+          `
+          INSERT INTO scraping_job_histories(scraping_job_id, started_at, ended_at, successful, content, created_at, updated_at) 
+          VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+          [scraping_job_id, started_at, ended_at, successful, content, timestamp, timestamp]
+        );
+        return result.rows[0];
       },
     },
   };

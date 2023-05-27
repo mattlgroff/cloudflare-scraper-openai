@@ -1,20 +1,19 @@
 {
   "name": "scheduler-service",
   "module": "index.ts",
-  "type": "module",
+  "type": "commonjs",
   "devDependencies": {
-    "@types/node-cron": "^3.0.7",
-    "bun-types": "^0.5.0"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+    "@types/express": "^4.17.17",
+    "@types/node-cron": "^3.0.7"
   },
   "dependencies": {
     "@upstash/redis": "^1.20.6",
-    "node-cron": "^3.0.2",
-    "postgres": "^3.3.4"
+    "cronstrue": "^2.27.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "node-cron": "^3.0.2"
   },
   "scripts": {
-    "start": "bun index.ts"
+    "start": "node ./index.js"
   }
 }
