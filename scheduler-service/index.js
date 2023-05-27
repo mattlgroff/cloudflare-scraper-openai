@@ -4,10 +4,12 @@ const cron = require('node-cron');
 const { runScrapingJob } = require('./runScrapingJob.js');
 const cronstrue = require('cronstrue');
 const cronParser = require('cron-parser');
-const moment = require('moment');
+const bodyParser = require('body-parser');
 
 // Initialize the express app
 const app = express();
+app.use(bodyParser.json()); // for parsing application/json
+app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
 let scheduledTasks = [];
 let appStartTime;
@@ -306,13 +308,13 @@ app.get('/:id', async (req, res) => {
     const diffInMinutes = Math.floor((nextRun - now) / 1000 / 60);
 
     let timeUntilNextRun = '';
-if (diffInMinutes < 60) {
-  timeUntilNextRun = `${diffInMinutes} minutes`;
-} else {
-  const hours = Math.floor(diffInMinutes / 60);
-  const minutes = diffInMinutes % 60;
-  timeUntilNextRun = `${hours} hours and ${minutes} minutes`;
-}
+    if (diffInMinutes < 60) {
+      timeUntilNextRun = `${diffInMinutes} minutes`;
+    } else {
+      const hours = Math.floor(diffInMinutes / 60);
+      const minutes = diffInMinutes % 60;
+      timeUntilNextRun = `${hours} hours and ${minutes} minutes`;
+    }
 
     if (!scrapingJob.histories || scrapingJob.histories.length === 0) {
       const html = `
@@ -335,6 +337,11 @@ if (diffInMinutes < 60) {
           The next job will run at ${timeUntilNextRun} at ${scrapingJob.cron_schedule} (${cronstrue.toString(
         scrapingJob.cron_schedule
       )} US Eastern).
+
+      <form action="/run_job" method="post" style="display:inline-block;">
+  <input type="hidden" name="jobId" value="${jobId}">
+  <input type="submit" value="Run job now" class="btn btn-primary mb-4">
+</form>
         </div>
       </body>
       </html>
@@ -377,6 +384,11 @@ if (diffInMinutes < 60) {
       </div>
       <div class="alert alert-info" role="alert">
         The next job will run at ${timeUntilNextRun} seconds at (${cronstrue.toString(scrapingJob.cron_schedule)} US Eastern).
+        <form action="/run_job" method="post" style="display:inline-block;">
+  <input type="hidden" name="jobId" value="${jobId}">
+  <input type="submit" value="Run job now" class="btn btn-primary mb-4">
+</form>
+
       </div>
       <table class="table table-striped w-100 mt-4">
         <thead>
@@ -399,6 +411,23 @@ if (diffInMinutes < 60) {
   } catch (error) {
     console.error(`Error in GET /${jobId}: ${error}`);
 
+    res.status(500).send(errorPage);
+  }
+});
+
+app.post('/run_job', async (req, res) => {
+  const jobId = req.body.jobId;
+
+  if (!jobId) {
+    res.status(400).send(errorPage);
+    return;
+  }
+
+  try {
+    await runScrapingJob(jobId);
+    res.redirect(`/${jobId}`);
+  } catch (error) {
+    console.error(`Error in POST /run_job: ${error}`);
     res.status(500).send(errorPage);
   }
 });
