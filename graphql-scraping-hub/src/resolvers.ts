@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { Redis } from "@upstash/redis/cloudflare";
+import { Redis } from '@upstash/redis/cloudflare';
 
 interface User {
   id: string;
@@ -41,25 +41,10 @@ const getResolvers = (env: any): any => {
       users: async () => {
         try {
           const cache = await redis.get('users');
-          console.log('cache for users', cache)
           if (cache) return cache;
 
           const { rows } = await pool.query('SELECT * FROM users');
-          console.log('rows for users', rows)
-          await redis.set('users', JSON.stringify(rows), {ex: 60});
-          return rows;
-        } catch (err) {
-          console.error(err);
-        }
-      },
-      scrapingJobs: async (_: any, { user_id }: { user_id: string }) => {
-        try {
-          const cache = await redis.get(`scrapingJobs:${user_id}`);
-          console.log('cache for users', cache)
-          if (cache) return cache;
-
-          const { rows } = await pool.query('SELECT * FROM scraping_jobs WHERE user_id = $1', [user_id]);
-          await redis.set(`scrapingJobs:${user_id}`, JSON.stringify(rows), {ex: 60});
+          await redis.set('users', JSON.stringify(rows));
           return rows;
         } catch (err) {
           console.error(err);
@@ -71,8 +56,23 @@ const getResolvers = (env: any): any => {
           if (cache) return cache;
 
           const { rows } = await pool.query('SELECT * FROM scraping_jobs WHERE id = $1', [id]);
-          await redis.set(`scrapingJob:${id}`, JSON.stringify(rows[0]), {ex: 60});
+          await redis.set(`scrapingJob:${id}`, JSON.stringify(rows[0]));
           return rows[0];
+        } catch (err) {
+          console.error(err);
+        }
+      },
+    },
+    User: {
+      scrapingJobs: async (user: User) => {
+        try {
+          const cache = await redis.get(`scrapingJobs:${user.id}`);
+          console.log('cache for user scrapingJobs', cache);
+          if (cache) return cache;
+
+          const { rows } = await pool.query('SELECT * FROM scraping_jobs WHERE user_id = $1', [user.id]);
+          await redis.set(`scrapingJobs:${user.id}`, JSON.stringify(rows));
+          return rows;
         } catch (err) {
           console.error(err);
         }
@@ -84,8 +84,11 @@ const getResolvers = (env: any): any => {
         const redis_content = await redis.get(job.id);
         if (redis_content) {
           try {
-            latest_content = JSON.parse(redis_content);
-            return latest_content;
+            latest_content = redis_content;
+
+            if (latest_content) {
+              return latest_content;
+            }
           } catch (error) {
             console.log('Failed to parse redis_content for job: ', job.id);
           }
@@ -97,15 +100,73 @@ const getResolvers = (env: any): any => {
           );
           try {
             latest_content = JSON.parse(histories[0]?.content || '');
-            return latest_content;
+            if (latest_content) {
+              return latest_content;
+            }
           } catch (error) {
             console.log('Failed to parse content from Postgres for job: ', job.id);
           }
         }
 
-        if (!latest_content) {
-          throw new Error('Failed to get latest content for job: ' + job.id);
+        return null;
+      },
+    },
+    Mutation: {
+      createScrapingJob: async (_: any, { input }: { input: ScrapingJob }) => {
+        const { user_id, href, selector, description, cron_schedule } = input;
+        const timestamp = new Date().toISOString(); // current timestamp in ISO format
+        const result = await pool.query(
+          `
+        INSERT INTO scraping_jobs(user_id, href, selector, description, cron_schedule, created_at, updated_at) 
+        VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+          [user_id, href, selector, description, cron_schedule, timestamp, timestamp]
+        );
+
+        // set cache for this scraping job
+        await redis.set(`scrapingJob:${result.rows[0].id}`, JSON.stringify(result.rows[0]));
+
+        return result.rows[0];
+      },
+      updateScrapingJob: async (_: any, { id, input }: { id: string; input: ScrapingJob }) => {
+        const { user_id, href, selector, description, cron_schedule } = input;
+        const timestamp = new Date().toISOString(); // current timestamp in ISO format
+        const result = await pool.query(
+          `
+          UPDATE scraping_jobs 
+          SET user_id=$1, href=$2, selector=$3, description=$4, cron_schedule=$5, updated_at=$6 
+          WHERE id=$7 RETURNING *`,
+          [user_id, href, selector, description, cron_schedule, timestamp, id]
+        );
+
+        // delete cache for scrapingJobs by User
+        await redis.del(`scrapingJobs:${user_id}`);
+
+        // update cache for this scrapingJob
+        await redis.set(`scrapingJob:${id}`, JSON.stringify(result.rows[0]));
+
+        return result.rows[0];
+      },
+      deleteScrapingJob: async (_: any, { id }: { id: string }) => {
+        // first get the job to obtain the user_id
+        const jobResult = await pool.query('SELECT * FROM scraping_jobs WHERE id = $1', [id]);
+
+        // if no scrapingJob is found, return false
+        if (jobResult.rowCount === 0) {
+          return false;
         }
+
+        const user_id = jobResult.rows[0].user_id;
+
+        // then delete from Postgres
+        await pool.query('DELETE FROM scraping_jobs WHERE id = $1', [id]);
+
+        // delete cache for scrapingJobs by User
+        await redis.del(`scrapingJobs:${user_id}`);
+
+        // delete scrapingJob from cache
+        await redis.del(`scrapingJob:${id}`);
+
+        return true;
       },
     },
   };

@@ -13,6 +13,7 @@ const typeDefs = gql`
     id: ID!
     email: String
     name: String
+    scrapingJobs: [ScrapingJob]
   }
 
   type ScrapingJob {
@@ -27,8 +28,21 @@ const typeDefs = gql`
 
   type Query {
     users: [User]
-    scrapingJobs(user_id: ID!): [ScrapingJob]
     scrapingJob(id: ID!): ScrapingJob
+  }
+
+  type Mutation {
+    createScrapingJob(input: ScrapingJobInput): ScrapingJob
+    updateScrapingJob(id: ID!, input: ScrapingJobInput): ScrapingJob
+    deleteScrapingJob(id: ID!): Boolean
+  }
+
+  input ScrapingJobInput {
+    user_id: ID!
+    href: String!
+    selector: String!
+    description: String
+    cron_schedule: String!
   }
 `;
 
@@ -48,19 +62,16 @@ export default {
         ...getResolvers(env),
       },
       formatError: (formattedError, error) => {
-        console.log('formattedError', formattedError)
-        console.log('error', error)
+        console.log('formattedError', formattedError);
+        console.log('error', error);
         // Return a different error message
-        if (
-          formattedError?.extensions?.code ===
-          ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED
-        ) {
+        if (formattedError?.extensions?.code === ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED) {
           return {
             ...formattedError,
             message: "Your query doesn't match the schema. Try double-checking it!",
           };
         }
-    
+
         // Otherwise return the formatted error. This error can also
         // be manipulated in other ways, as long as it's returned.
         return formattedError;
