@@ -157,6 +157,11 @@ app.get('/', async (req, res) => {
 app.get('/:id', async (req, res) => {
   const jobId = req.params.id;
 
+  if (!jobId) {
+    res.status(400).send('Missing jobId');
+    return;
+  }
+
   try {
     const response = await fetch(process.env.GRAPHQL_ENDPOINT, {
       method: 'POST',
@@ -189,6 +194,11 @@ app.get('/:id', async (req, res) => {
     const {
       data: { scrapingJob },
     } = await response.json();
+
+    if (!scrapingJob) {
+      res.status(404).send('Scraping Job not found');
+      return;
+    }
 
     let historyList = '';
     for (const history of scrapingJob.histories) {
