@@ -8,17 +8,16 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230419.0",
-    "@types/pg": "^8.10.1",
     "typescript": "^5.0.4",
     "wrangler": "^3.0.0"
   },
   "dependencies": {
     "@apollo/server": "^4.7.1",
     "@as-integrations/cloudflare-workers": "^0.1.1",
+    "@neondatabase/serverless": "^0.4.8",
     "@upstash/redis": "^1.20.6",
     "graphql": "^16.6.0",
     "graphql-tag": "^2.12.6",
-    "graphql-type-json": "^0.3.2",
-    "pg": "^8.11.0"
+    "graphql-type-json": "^0.3.2"
   }
 }

@@ -24,6 +24,7 @@ const typeDefs = gql`
     description: String
     cron_schedule: String
     latest_content: JSON
+    histories: [ScrapingJobHistory]
   }
 
   type ScrapingJobHistory {

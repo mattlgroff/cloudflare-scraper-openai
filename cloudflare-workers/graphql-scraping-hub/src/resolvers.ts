@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool } from '@neondatabase/serverless';
 import { Redis } from '@upstash/redis/cloudflare';
 
 interface User {
@@ -37,10 +37,7 @@ interface Env {
 
 const getResolvers = (env: any): any => {
   const pool = new Pool({
-    connectionString: `${env.DATABASE_URL}?sslmode=require`,
-    ssl: {
-      rejectUnauthorized: true, // Only allow SSL with certificates from trusted Certificate Authorities
-    },
+    connectionString: env.DATABASE_URL,
   });
 
   const redis = Redis.fromEnv(env);
@@ -90,6 +87,17 @@ const getResolvers = (env: any): any => {
           return JSON.parse(histories[0]?.content || null);
         } catch (error) {
           console.log('Failed to parse content from Postgres for job: ', job.id);
+        }
+      },
+      histories: async (job: ScrapingJob) => {
+        try {
+          const { rows: histories } = await pool.query(
+            'SELECT * FROM scraping_job_histories WHERE scraping_job_id = $1 ORDER BY started_at DESC',
+            [job.id]
+          );
+          return histories;
+        } catch (err) {
+          console.error(err);
         }
       },
     },

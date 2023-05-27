@@ -69,6 +69,8 @@ async function runScrapingJob(id) {
 
     // Update Redis
     await redis.set(`scrapingJob:${id}`, JSON.stringify(content));
+
+    console.log(`Successfully ran scraping job ${id} at ${endedAt}`)
   } catch (error) {
     const endedAt = new Date().toISOString();
 
