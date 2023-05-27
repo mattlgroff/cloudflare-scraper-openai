@@ -150,17 +150,26 @@ app.get('/', async (req, res) => {
     res.send(html);
   } catch (error) {
     console.error(`Error in GET /: ${error}`);
-    res.status(500).send('Error');
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Error</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+      </head>
+      <body class="p-4">
+        <h1>An Error Occurred</h1>
+        <p>Sorry, there was an error processing your request. Please try again later.</p>
+      </body>
+      </html>
+    `;
+    res.status(500).send(html);
   }
 });
 
 app.get('/:id', async (req, res) => {
   const jobId = req.params.id;
-
-  if (!jobId) {
-    res.status(400).send('Missing jobId');
-    return;
-  }
 
   try {
     const response = await fetch(process.env.GRAPHQL_ENDPOINT, {
@@ -196,7 +205,22 @@ app.get('/:id', async (req, res) => {
     } = await response.json();
 
     if (!scrapingJob) {
-      res.status(404).send('Scraping Job not found');
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>404 Job Not Found</title>
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+        </head>
+        <body class="p-4">
+          <h1>404 - Scraping Job Not Found</h1>
+          <p>The job with id "${jobId}" could not be found.</p>
+          <a href="/" class="btn btn-primary">Go back</a>
+        </body>
+        </html>
+      `;
+      res.status(404).send(html);
       return;
     }
 
@@ -257,7 +281,24 @@ app.get('/:id', async (req, res) => {
     res.send(html);
   } catch (error) {
     console.error(`Error in GET /${jobId}: ${error}`);
-    res.status(500).send('Error');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Error</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+      </head>
+      <body class="p-4">
+        <h1>An Error Occurred</h1>
+        <p>Sorry, there was an error processing your request. Please try again later.</p>
+        <a href="/" class="btn btn-primary">Go back</a>
+      </body>
+      </html>
+    `;
+
+    res.status(500).send(html);
   }
 });
 
