@@ -8,8 +8,8 @@ class Scraper {
 
   async fetch(url) {
     this.url = url
-    this.response = await fetch(url)
-
+    this.response = await fetch(url, { redirect: 'manual' });
+    
     const server = this.response.headers.get('server')
 
     const isThisWorkerErrorNotErrorWithinScrapedSite = (
