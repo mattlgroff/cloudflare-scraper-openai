@@ -105,7 +105,9 @@ app.get('/', async (req, res) => {
       <td><a href="${scrapingJob.href}" target="_blank">${scrapingJob.href}</a></td>
       <td>${scrapingJob.selector}</td>
       <td>${scrapingJob.description}</td>
-      <td>${scrapingJob.latest_content ? JSON.stringify(scrapingJob.latest_content) : '❌'}</td>
+      <td><pre><code class="json">${
+        scrapingJob.latest_content ? JSON.stringify(scrapingJob.latest_content, null, 2) : '❌'
+      }</code></pre></td>
       <td>${scrapingJob.cron_schedule}</td>
       <td>${cronstrue.toString(scrapingJob.cron_schedule)} US Eastern</td>
     </tr>
@@ -189,15 +191,20 @@ app.get('/:id', async (req, res) => {
 
     let historyList = '';
     for (const history of scrapingJob.histories) {
-      const startedAt = new Date(Number(history.started_at)).toLocaleString();
-      const endedAt = history.ended_at ? new Date(Number(history.ended_at)).toLocaleString() : 'N/A';
+      const startedAt = new Date(Number(history.started_at)).toLocaleString('en-US', { timeZone: 'America/New_York' });
+
+      const endedAt = history.ended_at
+        ? new Date(Number(history.ended_at)).toLocaleString('en-US', { timeZone: 'America/New_York' })
+        : 'N/A';
+
+      const content = history.content ? JSON.parse(history.content) : null;
 
       historyList += `
       <tr>
-        <td>${startedAt}</td>
-        <td>${endedAt}</td>
+        <td>${startedAt} - US Eastern</td>
+        <td>${endedAt} - US Eastern</td>
         <td>${history.successful ? '✅' : '❌'}</td>
-        <td>${history.content ? JSON.stringify(history.content) : '❌'}</td>
+        <td><pre><code class="json">${content ? JSON.stringify(content, null, 2) : '❌'}</code></pre></td>
       </tr>
     `;
     }
