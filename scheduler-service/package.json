@@ -1,0 +1,20 @@
+{
+  "name": "scheduler-service",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/node-cron": "^3.0.7",
+    "bun-types": "^0.5.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.20.6",
+    "node-cron": "^3.0.2",
+    "postgres": "^3.3.4"
+  },
+  "scripts": {
+    "start": "bun index.ts"
+  }
+}
