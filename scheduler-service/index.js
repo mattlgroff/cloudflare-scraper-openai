@@ -215,7 +215,7 @@ app.get('/:id', async (req, res) => {
         </head>
         <body class="p-4">
           <h1>404 - Scraping Job Not Found</h1>
-          <p>The job with id "${jobId}" could not be found.</p>
+          <p>The job with that id could not be found.</p>
           <a href="/" class="btn btn-primary">Go back</a>
         </body>
         </html>
