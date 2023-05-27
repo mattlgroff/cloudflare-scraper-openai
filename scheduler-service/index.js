@@ -155,8 +155,9 @@ app.get('/', async (req, res) => {
 });
 
 app.get('/:id', async (req, res) => {
+  const jobId = req.params.id;
+
   try {
-    const jobId = req.params.id;
     const response = await fetch(process.env.GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: {
